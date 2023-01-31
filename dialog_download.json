@@ -1,0 +1,24 @@
+{
+ "info": {"version": 1, "license": "LGPL-2.0-or-later", "author": "Cyril Hrubis <metan@ucw.cz>"},
+ "layout": {
+  "widgets": [
+   {"type": "frame", "uid": "title", "title": "Download",
+    "widget": {
+     "rows": 3,
+     "widgets": [
+      {
+       "cols": 2,
+       "align": "hfill",
+       "widgets": [
+        {"type": "stock", "stock": "arrow_down"},
+        {"type": "label", "text": "filename", "uid": "filename"}
+       ]
+      },
+      {"type": "pbar", "uid": "progress", "align": "hfill"},
+      {"type": "button", "label": "Cancel", "on_event": "cancel", "focused": true}
+     ]
+    }
+   }
+  ]
+ }
+}
