@@ -19,6 +19,11 @@ struct download_dialog {
 	gp_widget *progress;
 };
 
+#define DIALOG_OK 1
+#define DIALOG_CANCEL 2
+#define DIALOG_FAIL 3
+#define DIALOG_WRITE 4
+
 static int xferinfo(void *p,
                     curl_off_t dltotal, curl_off_t dlnow,
                     curl_off_t ultotal, curl_off_t ulnow)
@@ -51,7 +56,7 @@ static int do_cancel(gp_widget_event *ev)
 	if (ev->type != GP_WIDGET_EVENT_WIDGET)
 		return 0;
 
-	dialog->retval = 1;
+	dialog->retval = DIALOG_CANCEL;
 
 	return 0;
 }
@@ -110,9 +115,13 @@ static void parse_curl_msg(struct download_dialog *download)
 			gp_dialog_msg_printf_run(GP_DIALOG_MSG_ERR,
 			                         "Download failed",
 			                         "%s", curl_easy_strerror(message->data.result));
+			if (message->data.result == CURLE_WRITE_ERROR)
+				download->dialog.retval = DIALOG_WRITE;
+			else
+				download->dialog.retval = DIALOG_FAIL;
+		} else {
+			download->dialog.retval = DIALOG_OK;
 		}
-
-		download->dialog.retval = 1;
 	}
 }
 
@@ -194,22 +203,21 @@ static int timer_cb(CURLM *multi, long timeout_ms, void *userp)
 	return 0;
 }
 
-int gp_dialog_download_run(const char *url, const char *dest_file)
+gp_dialog_download_res gp_dialog_download_run(const char *url, const char *dest_file)
 {
-	CURLMcode res;
 	FILE *dest;
 	struct download_dialog download = {};
 	gp_widget *progress;
 	int ret = 0;
 
 	if (curl_global_init(CURL_GLOBAL_ALL)) {
-		ret = 1;
+		ret = GP_DIALOG_DOWNLOAD_ERR;
 		goto err0;
 	}
 
 	download.dialog.layout = load_download_layout(&download.dialog, url, dest_file, &progress);
 	if (!download.dialog.layout) {
-		ret = 1;
+		ret = GP_DIALOG_DOWNLOAD_ERR;
 		goto err0;
 	}
 
@@ -218,14 +226,14 @@ int gp_dialog_download_run(const char *url, const char *dest_file)
 		gp_dialog_msg_printf_run(GP_DIALOG_MSG_ERR,
 		                         "Failed to open file",
 		                         "%s: %s", dest_file, strerror(errno));
-		ret = 2;
+		ret = GP_DIALOG_DOWNLOAD_ERR_OPEN;
 		goto err1;
 	}
 
 	download.easy = curl_easy_init();
 	download.multi = curl_multi_init();
 	if (!download.easy || !download.multi) {
-		ret = 3;
+		ret = GP_DIALOG_DOWNLOAD_ERR;
 		goto err3;
 	}
 
@@ -253,10 +261,24 @@ int gp_dialog_download_run(const char *url, const char *dest_file)
 	//BE VERBOSE
 	curl_easy_setopt(download.easy, CURLOPT_VERBOSE, 1L);
 
-	res = curl_multi_add_handle(download.multi, download.easy);
-	printf("%i\n", res);
+	if (curl_multi_add_handle(download.multi, download.easy)) {
+		ret = GP_DIALOG_DOWNLOAD_ERR;
+		goto err3;
+	}
 
-	gp_dialog_run(&download.dialog);
+	switch (gp_dialog_run(&download.dialog)) {
+	case DIALOG_OK:
+	break;
+	case DIALOG_FAIL:
+		ret = GP_DIALOG_DOWNLOAD_FAILED;
+		goto err4;
+	case DIALOG_CANCEL:
+		ret = GP_DIALOG_DOWNLOAD_CANCELED;
+		goto err4;
+	case DIALOG_WRITE:
+		ret = GP_DIALOG_DOWNLOAD_ERR_WRITE;
+		goto err4;
+	}
 
 	curl_multi_remove_handle(download.multi, download.easy);
 	curl_easy_cleanup(download.easy);
@@ -264,13 +286,15 @@ int gp_dialog_download_run(const char *url, const char *dest_file)
 	curl_global_cleanup();
 
 	if (fclose(dest)) {
-		ret = 4;
+		ret = GP_DIALOG_DOWNLOAD_ERR_WRITE;
 		goto err2;
 	}
 
 	gp_widget_free(download.dialog.layout);
 
 	return 0;
+err4:
+	curl_multi_remove_handle(download.multi, download.easy);
 err3:
 	curl_easy_cleanup(download.easy);
 	curl_multi_cleanup(download.multi);
