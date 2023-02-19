@@ -5,4 +5,4 @@ LIB_HEADERS=$(wildcard *.h)
 LIB_LDLIBS=$(shell curl-config --libs)
 
 BIN=download_example
-LDLIBS=$(shell gfxprim-config --libs --libs-widgets)
+LDLIBS=$(shell gfxprim-config --libs-widgets --libs)
