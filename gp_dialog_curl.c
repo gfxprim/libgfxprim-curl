@@ -12,6 +12,13 @@
 #include "gp_dialog_curl.h"
 #include "dialog_download.json.h"
 
+struct download_dialog {
+	CURL *easy;
+	CURLM *multi;
+	gp_dialog dialog;
+	gp_widget *progress;
+};
+
 static int xferinfo(void *p,
                     curl_off_t dltotal, curl_off_t dlnow,
                     curl_off_t ultotal, curl_off_t ulnow)
@@ -90,9 +97,28 @@ static gp_widget *load_download_layout(gp_dialog *dialog, const char *url, const
 	return ret;
 }
 
+static void parse_curl_msg(struct download_dialog *download)
+{
+	int running;
+	CURLMsg *message;
+
+	while ((message = curl_multi_info_read(download->multi, &running))) {
+		if (message->msg != CURLMSG_DONE)
+			continue;
+
+		if (message->data.result) {
+			gp_dialog_msg_printf_run(GP_DIALOG_MSG_ERR,
+			                         "Download failed",
+			                         "%s", curl_easy_strerror(message->data.result));
+		}
+
+		download->dialog.retval = 1;
+	}
+}
+
 static int socket_data(struct gp_fd *self, struct pollfd *pfd)
 {
-	CURLM *multi = self->priv;
+	struct download_dialog *download = self->priv;
 	CURLMcode rc;
 	int running;
 	int flags = 0;
@@ -103,12 +129,9 @@ static int socket_data(struct gp_fd *self, struct pollfd *pfd)
 	if (pfd->revents & POLLOUT)
 		flags |= CURL_CSELECT_OUT;
 
-	rc = curl_multi_socket_action(multi, pfd->fd, flags, &running);
+	rc = curl_multi_socket_action(download->multi, pfd->fd, flags, &running);
 
-	CURLMsg *message;
-
-	while((message = curl_multi_info_read(multi, &running)))
-		printf("MESSAGE %i\n", message->msg);
+	parse_curl_msg(download);
 
 	return 0;
 }
@@ -141,14 +164,14 @@ static int socket_cb(CURL *easy, curl_socket_t s, int action, void *userp, void 
 
 static uint32_t timeout_cb(gp_timer *self)
 {
-	int running;
 	CURLMcode rc;
-	CURLMsg *message;
+	int running;
+	struct download_dialog *download = self->priv;
 
-	rc = curl_multi_socket_action(self->priv, CURL_SOCKET_TIMEOUT, 0, &running);
+	rc = curl_multi_socket_action(download->multi, CURL_SOCKET_TIMEOUT, 0, &running);
 	printf(" multi_socket_action(TIMEOUT)! %i\n", rc);
-	while((message = curl_multi_info_read(self->priv, &running)))
-		printf("MESSAGE %i\n", message->msg);
+
+	parse_curl_msg(download);
 
 	return 0;
 }
@@ -173,11 +196,9 @@ static int timer_cb(CURLM *multi, long timeout_ms, void *userp)
 
 int gp_dialog_download_run(const char *url, const char *dest_file)
 {
-	CURL *curl;
-	CURLM *curl_multi;
 	CURLMcode res;
 	FILE *dest;
-	gp_dialog dialog = {};
+	struct download_dialog download = {};
 	gp_widget *progress;
 	int ret = 0;
 
@@ -186,8 +207,8 @@ int gp_dialog_download_run(const char *url, const char *dest_file)
 		goto err0;
 	}
 
-	dialog.layout = load_download_layout(&dialog, url, dest_file, &progress);
-	if (!dialog.layout) {
+	download.dialog.layout = load_download_layout(&download.dialog, url, dest_file, &progress);
+	if (!download.dialog.layout) {
 		ret = 1;
 		goto err0;
 	}
@@ -201,45 +222,45 @@ int gp_dialog_download_run(const char *url, const char *dest_file)
 		goto err1;
 	}
 
-	curl = curl_easy_init();
-	curl_multi = curl_multi_init();
-	if (!curl || !curl_multi) {
+	download.easy = curl_easy_init();
+	download.multi = curl_multi_init();
+	if (!download.easy || !download.multi) {
 		ret = 3;
 		goto err3;
 	}
 
 	gp_timer timeout_timer = {
 		.callback = timeout_cb,
-		.priv = curl_multi,
+		.priv = &download,
 		.id = "CURL timeout",
 	};
 
 	/* Set callbacks to add socket to poll() and start a timer */
-	curl_multi_setopt(curl_multi, CURLMOPT_SOCKETFUNCTION, socket_cb);
-	curl_multi_setopt(curl_multi, CURLMOPT_SOCKETDATA, curl_multi);
-	curl_multi_setopt(curl_multi, CURLMOPT_TIMERFUNCTION, timer_cb);
-	curl_multi_setopt(curl_multi, CURLMOPT_TIMERDATA, &timeout_timer);
+	curl_multi_setopt(download.multi, CURLMOPT_SOCKETFUNCTION, socket_cb);
+	curl_multi_setopt(download.multi, CURLMOPT_SOCKETDATA, &download);
+	curl_multi_setopt(download.multi, CURLMOPT_TIMERFUNCTION, timer_cb);
+	curl_multi_setopt(download.multi, CURLMOPT_TIMERDATA, &timeout_timer);
 
 	/* sets URL */
-	curl_easy_setopt(curl, CURLOPT_URL, url);
+	curl_easy_setopt(download.easy, CURLOPT_URL, url);
 	/* enable progressbar */
-	curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, xferinfo);
-	curl_easy_setopt(curl, CURLOPT_XFERINFODATA, progress);
-	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+	curl_easy_setopt(download.easy, CURLOPT_XFERINFOFUNCTION, xferinfo);
+	curl_easy_setopt(download.easy, CURLOPT_XFERINFODATA, progress);
+	curl_easy_setopt(download.easy, CURLOPT_NOPROGRESS, 0L);
 	/* write to a file */
-	//curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, dest);
+	//curl_easy_setopt(download.easy, CURLOPT_WRITEFUNCTION, write_data);
+	curl_easy_setopt(download.easy, CURLOPT_WRITEDATA, dest);
 	//BE VERBOSE
-	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+	curl_easy_setopt(download.easy, CURLOPT_VERBOSE, 1L);
 
-	res = curl_multi_add_handle(curl_multi, curl);
+	res = curl_multi_add_handle(download.multi, download.easy);
 	printf("%i\n", res);
 
-	gp_dialog_run(&dialog);
+	gp_dialog_run(&download.dialog);
 
-	curl_multi_remove_handle(curl_multi, curl);
-	curl_easy_cleanup(curl);
-	curl_multi_cleanup(curl_multi);
+	curl_multi_remove_handle(download.multi, download.easy);
+	curl_easy_cleanup(download.easy);
+	curl_multi_cleanup(download.multi);
 	curl_global_cleanup();
 
 	if (fclose(dest)) {
@@ -247,18 +268,18 @@ int gp_dialog_download_run(const char *url, const char *dest_file)
 		goto err2;
 	}
 
-	gp_widget_free(dialog.layout);
+	gp_widget_free(download.dialog.layout);
 
 	return 0;
 err3:
-	curl_easy_cleanup(curl);
-	curl_multi_cleanup(curl_multi);
+	curl_easy_cleanup(download.easy);
+	curl_multi_cleanup(download.multi);
 	curl_global_cleanup();
 	fclose(dest);
 err2:
 	unlink(dest_file);
 err1:
-	gp_widget_free(dialog.layout);
+	gp_widget_free(download.dialog.layout);
 err0:
 	return ret;
 }
