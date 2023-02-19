@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 -include config.mk
 CFLAGS?=-W -Wall -O2
-PREFIX?=/usr/local/
+PREFIX?=/usr/local
 LIBDIR?=$(PREFIX)/lib
 BINDIR?=$(PREFIX)/bin
-INCLUDEDIR?=$(PREFIX)/include
+INCLUDEDIR?=$(PREFIX)/include/gfxprim/widgets/
 
 include proj.mk
 
