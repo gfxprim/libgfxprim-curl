@@ -55,10 +55,11 @@ $(BIN_DEPS) $(LIB_DEPS): %.dep: %.c
 
 install:
 	install -d $(DESTDIR)/$(LIBDIR)
-	install $(LIB_FILE) $(LIB_SNAME) -t $(DESTDIR)/$(LIBDIR)
+	install $(LIB_FILE) -t $(DESTDIR)/$(LIBDIR)
+	install -m 644 $(LIB_SNAME) -t $(DESTDIR)/$(LIBDIR)
 	cp -d $(LIB_NAME) $(LIB_SONAME) $(DESTDIR)/$(LIBDIR)
 	install -d $(DESTDIR)/$(INCLUDEDIR)
-	install $(LIB_HEADERS) -t $(DESTDIR)/$(INCLUDEDIR)
+	install -m 644 $(LIB_HEADERS) -t $(DESTDIR)/$(INCLUDEDIR)
 ifeq ($(BIN_INSTALL),1)
 ifdef BIN
 	install -d $(DESTDIR)/$(BINDIR)
