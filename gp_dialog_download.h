@@ -3,8 +3,8 @@
  * Copyright (C) 2023 Cyril Hrubis <metan@ucw.cz>
  */
 
-#ifndef GP_DIALOG_CURL
-#define GP_DIALOG_CURL
+#ifndef GP_DIALOG_DOWNLOAD
+#define GP_DIALOG_DOWNLOAD
 
 typedef enum gp_dialog_download_res {
 	/* File downloaded fine */
@@ -30,4 +30,4 @@ typedef enum gp_dialog_download_res {
  */
 gp_dialog_download_res gp_dialog_download_run(const char *url, const char *file);
 
-#endif /* GP_DIALOG_CURL */
+#endif /* GP_DIALOG_DOWNLOAD */

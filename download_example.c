@@ -4,7 +4,7 @@
  */
 
 #include <widgets/gp_widgets.h>
-#include "gp_dialog_curl.h"
+#include "gp_dialog_download.h"
 
 struct url_path {
 	gp_widget *url;

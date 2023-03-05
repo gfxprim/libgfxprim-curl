@@ -9,7 +9,7 @@
 #include <curl/curl.h>
 #include <widgets/gp_widgets.h>
 
-#include "gp_dialog_curl.h"
+#include "gp_dialog_download.h"
 #include "dialog_download.json.h"
 
 struct download_dialog {
