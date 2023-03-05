@@ -9,6 +9,8 @@ INCLUDEDIR?=$(PREFIX)/include/gfxprim/widgets/
 
 include proj.mk
 
+BIN_INSTALL?=1
+
 LIB_OBJS=$(subst .c,.o,$(LIB_SRCS))
 LIB_DEPS=$(subst .c,.dep,$(LIB_SRCS))
 LIB_SNAME=lib$(LIB).a
@@ -57,8 +59,12 @@ install:
 	cp -d $(LIB_NAME) $(LIB_SONAME) $(DESTDIR)/$(LIBDIR)
 	install -d $(DESTDIR)/$(INCLUDEDIR)
 	install $(LIB_HEADERS) -t $(DESTDIR)/$(INCLUDEDIR)
-	[ -z "$(BIN)" ] || install -d $(DESTDIR)/$(BINDIR)
-	[ -z "$(BIN)" ] || install $(BIN) -t $(DESTDIR)/$(BINDIR)
+ifeq ($(BIN_INSTALL),1)
+ifdef BIN
+	install -d $(DESTDIR)/$(BINDIR)
+	install $(BIN) -t $(DESTDIR)/$(BINDIR)
+endif
+endif
 
 clean:
 	rm -f $(LIB_NAME) $(LIB_SONAME) $(LIB_FILE) $(LIB_SNAME) $(LIB_OBJS) $(BIN) $(BIN_OBJS) $(LIB_DEPS) $(BIN_DEPS) config.mk
