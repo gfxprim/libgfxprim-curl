@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 -include config.mk
 CFLAGS?=-W -Wall -O2
-PREFIX?=/usr/local
+CFLAGS+=-std=gnu99
+PREFIX?=/usr/local/
 LIBDIR?=$(PREFIX)/lib
 BINDIR?=$(PREFIX)/bin
 INCLUDEDIR?=$(PREFIX)/include/gfxprim/widgets/
@@ -51,10 +52,13 @@ $(BIN_DEPS) $(LIB_DEPS): %.dep: %.c
 	$(CC) -MM $(CFLAGS) $< -o $@
 
 install:
-	install -D $(LIB_FILE) -t $(DESTDIR)/$(LIBDIR)
+	install -d $(DESTDIR)/$(LIBDIR)
+	install $(LIB_FILE) $(LIB_SNAME) -t $(DESTDIR)/$(LIBDIR)
 	cp -d $(LIB_NAME) $(LIB_SONAME) $(DESTDIR)/$(LIBDIR)
-	install -D $(LIB_HEADERS) -t $(DESTDIR)/$(INCLUDEDIR)
-	[ -z "$(BIN)" ] || install -D $(BIN) -t $(DESTDIR)/$(BINDIR)
+	install -d $(DESTDIR)/$(INCLUDEDIR)
+	install $(LIB_HEADERS) -t $(DESTDIR)/$(INCLUDEDIR)
+	[ -z "$(BIN)" ] || install -d $(DESTDIR)/$(BINDIR)
+	[ -z "$(BIN)" ] || install $(BIN) -t $(DESTDIR)/$(BINDIR)
 
 clean:
 	rm -f $(LIB_NAME) $(LIB_SONAME) $(LIB_FILE) $(LIB_SNAME) $(LIB_OBJS) $(BIN) $(BIN_OBJS) $(LIB_DEPS) $(BIN_DEPS) config.mk
