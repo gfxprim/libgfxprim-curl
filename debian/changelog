@@ -1,0 +1,5 @@
+libgfxprim-curl (1.0.0-1) unstable; urgency=low
+
+  * Initial release
+
+ -- Cyril Hrubis <metan@ucw.cz>  Sun, 5 Mar 2023 12:00:00 +0100
