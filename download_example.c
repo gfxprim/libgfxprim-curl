@@ -27,8 +27,8 @@ int main(int argc, char *argv[])
 {
 	gp_widget *layout = gp_widget_grid_new(1, 3, 0);
 	gp_widget *button = gp_widget_button_new("Download", 0);
-	gp_widget *url = gp_widget_tbox_new("http://metan.ucw.cz/outgoing/stojan.jpg", 0, 40, 0, NULL, GP_WIDGET_TBOX_URL, NULL, 0);
-	gp_widget *path = gp_widget_tbox_new(getenv("HOME"), 0, 40, 0, NULL, GP_WIDGET_TBOX_PATH, NULL, 0);
+	gp_widget *url = gp_widget_tbox_new("http://metan.ucw.cz/outgoing/stojan.jpg", 0, 40, 0, NULL, GP_WIDGET_TBOX_URL);
+	gp_widget *path = gp_widget_tbox_new(getenv("HOME"), 0, 40, 0, NULL, GP_WIDGET_TBOX_PATH);
 
 	gp_widget_grid_put(layout, 0, 0, url);
 	gp_widget_grid_put(layout, 0, 1, path);
