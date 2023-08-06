@@ -125,20 +125,20 @@ static void parse_curl_msg(struct download_dialog *download)
 	}
 }
 
-static int socket_data(struct gp_fd *self, struct pollfd *pfd)
+static int socket_data(struct gp_fd *self)
 {
 	struct download_dialog *download = self->priv;
 	CURLMcode rc;
 	int running;
 	int flags = 0;
 
-	if (pfd->revents & POLLIN)
+	if (self->pfd->revents & POLLIN)
 		flags |= CURL_CSELECT_IN;
 
-	if (pfd->revents & POLLOUT)
+	if (self->pfd->revents & POLLOUT)
 		flags |= CURL_CSELECT_OUT;
 
-	rc = curl_multi_socket_action(download->multi, pfd->fd, flags, &running);
+	rc = curl_multi_socket_action(download->multi, self->pfd->fd, flags, &running);
 
 	parse_curl_msg(download);
 
@@ -149,7 +149,7 @@ static int socket_cb(CURL *easy, curl_socket_t s, int action, void *userp, void 
 {
 	int flags = 0;
 
-	gp_fds_rem(gp_widgets_fds, s);
+	gp_widget_fds_rem(s);
 
 	switch(action) {
 	case CURL_POLL_IN:
@@ -166,7 +166,7 @@ static int socket_cb(CURL *easy, curl_socket_t s, int action, void *userp, void 
 		return 0;
 	}
 
-	gp_fds_add(gp_widgets_fds, s, flags, socket_data, userp);
+	gp_widget_fds_add(s, flags, socket_data, userp);
 
 	return 0;
 }
