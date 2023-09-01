@@ -125,20 +125,20 @@ static void parse_curl_msg(struct download_dialog *download)
 	}
 }
 
-static int socket_data(struct gp_fd *self)
+static int socket_data(gp_fd *self)
 {
 	struct download_dialog *download = self->priv;
 	CURLMcode rc;
 	int running;
 	int flags = 0;
 
-	if (self->pfd->revents & POLLIN)
+	if (self->revents & GP_POLLIN)
 		flags |= CURL_CSELECT_IN;
 
-	if (self->pfd->revents & POLLOUT)
+	if (self->revents & GP_POLLOUT)
 		flags |= CURL_CSELECT_OUT;
 
-	rc = curl_multi_socket_action(download->multi, self->pfd->fd, flags, &running);
+	rc = curl_multi_socket_action(download->multi, self->fd, flags, &running);
 
 	parse_curl_msg(download);
 
@@ -149,24 +149,31 @@ static int socket_cb(CURL *easy, curl_socket_t s, int action, void *userp, void 
 {
 	int flags = 0;
 
-	gp_widget_fds_rem(s);
+	gp_widget_poll_rem_by_fd(s);
 
-	switch(action) {
+	switch (action) {
 	case CURL_POLL_IN:
-		flags = POLLIN;
+		flags = GP_POLLIN;
 	break;
 	case CURL_POLL_OUT:
-		flags = POLLOUT;
+		flags = GP_POLLOUT;
 	break;
 	case CURL_POLL_INOUT:
-		flags = POLLOUT | POLLIN;
+		flags = GP_POLLOUT | GP_POLLIN;
 	break;
 	case CURL_POLL_REMOVE:
 	default:
 		return 0;
 	}
 
-	gp_widget_fds_add(s, flags, socket_data, userp);
+	gp_fd *new_fd = malloc(sizeof(gp_fd));
+
+	new_fd->fd = s;
+	new_fd->events = flags;
+	new_fd->event = socket_data;
+	new_fd->priv = userp;
+
+	gp_widget_poll_add(new_fd);
 
 	return 0;
 }
