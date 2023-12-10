@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-2.1-or-later
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Copyright (C) 2023 Cyril Hrubis <metan@ucw.cz>
  */
@@ -23,6 +23,14 @@ static int run_download_dialog(gp_widget_event *ev)
 	return 0;
 }
 
+gp_app_info app_info = {
+	.name = "Download Example",
+	.desc = "Libcurl integration example",
+	.version = "1.0",
+	.url = "http://github.com/gfxprim/libgfxprim-curl",
+	.license = "GPL-2.0-or-later",
+};
+
 int main(int argc, char *argv[])
 {
 	gp_widget *layout = gp_widget_grid_new(1, 3, 0);
@@ -41,7 +49,7 @@ int main(int argc, char *argv[])
 
 	gp_widget_on_event_set(button, run_download_dialog, &url_path);
 
-	gp_widgets_main_loop(layout, "Download Example", NULL, argc, argv);
+	gp_widgets_main_loop(layout, NULL, argc, argv);
 
 	return 0;
 }
