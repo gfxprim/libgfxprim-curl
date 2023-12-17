@@ -37,8 +37,8 @@ static int xferinfo(void *p,
 	(void) ultotal;
 	(void) ulnow;
 
-	gp_widget_pbar_set_max(p, dltotal);
-	gp_widget_pbar_set(p, dlnow);
+	gp_widget_pbar_max_set(p, dltotal);
+	gp_widget_pbar_val_set(p, dlnow);
 
 	return 0;
 }
