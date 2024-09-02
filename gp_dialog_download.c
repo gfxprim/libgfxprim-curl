@@ -125,7 +125,7 @@ static void parse_curl_msg(struct download_dialog *download)
 	}
 }
 
-static int socket_data(gp_fd *self)
+static enum gp_poll_event_ret socket_data(gp_fd *self)
 {
 	struct download_dialog *download = self->priv;
 	CURLMcode rc;
