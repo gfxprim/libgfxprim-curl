@@ -197,15 +197,15 @@ static int timer_cb(CURLM *multi, long timeout_ms, void *userp)
 	gp_timer *timer = userp;
 
 	if (timeout_ms < 0) {
-		gp_widgets_timer_rem(timer);
+		gp_app_timer_stop(timer);
 		return 0;
 	}
 
 	if (timer->running)
-		gp_widgets_timer_rem(timer);
+		gp_app_timer_stop(timer);
 
 	timer->expires = timeout_ms;
-	gp_widgets_timer_ins(timer);
+	gp_app_timer_start(timer);
 
 	return 0;
 }
