@@ -149,7 +149,7 @@ static int socket_cb(CURL *easy, curl_socket_t s, int action, void *userp, void 
 {
 	int flags = 0;
 
-	gp_widget_poll_rem_by_fd(s);
+	gp_app_poll_rem_by_fd(s);
 
 	switch (action) {
 	case CURL_POLL_IN:
@@ -173,7 +173,7 @@ static int socket_cb(CURL *easy, curl_socket_t s, int action, void *userp, void 
 	new_fd->event = socket_data;
 	new_fd->priv = userp;
 
-	gp_widget_poll_add(new_fd);
+	gp_app_poll_add(new_fd);
 
 	return 0;
 }
